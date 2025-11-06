@@ -2,14 +2,15 @@ import { NextFunction, Request, RequestHandler, Response } from 'express'
 import prisma from '../services/prisma.service'
 import { UserModel } from '../generated/prisma/models/User'
 import { RegisterUserBody } from '../validations/register.validation'
-import { hashPassword } from '../utils/password.util'
+import { hashPassword, validatePassword } from '../utils/password.util'
+import jwt from 'jsonwebtoken'
+import { LoginUserBody } from '../validations/login.validation'
 
 export const getHello: RequestHandler = (req, res) => {
   res.status(200).json({ message: 'Hello from user controller' })
 }
 
 // Получение списка пользователей
-// TODO: список пользователей может получить только админ
 export const getAllUsers = async (
   req: Request,
   res: Response,
@@ -64,7 +65,7 @@ export const registerUser = async (
 
     res
       .status(201)
-      .json({ message: 'User registered successfully', data: user })
+      .json({ message: 'User registered successfully', data: { user } })
   } catch (error) {
     next(error)
   }
@@ -72,7 +73,7 @@ export const registerUser = async (
 
 // Авторизация пользователя
 export const loginUser = async (
-  req: Request,
+  req: Request<unknown, unknown, LoginUserBody>,
   res: Response,
   next: NextFunction,
 ) => {
@@ -81,11 +82,28 @@ export const loginUser = async (
     const user: UserModel | null = await prisma.user.findFirst({
       where: { email },
     })
+
+    if (!user || !validatePassword(password, user.password)) {
+      return res.status(401).json({ message: 'Invalid credentials' })
+    }
+
+    const payload = { userId: user.id, role: user.role }
+    const token = jwt.sign(payload, process.env.JWT_SECRET!, {
+      expiresIn: '1h',
+    })
+
+    return res
+      .status(200)
+      .json({ message: 'User logged in successfully', data: { token } })
   } catch (error) {
     next(error)
   }
 }
 
 // Получение пользователя по ID
+// либо админ, либо пользователь сам себя
+export const getUserById = async () => {}
 
 // Блокировка пользователя
+// либо админ, либо пользователь сам себя
+export const blockUser = async () => {}
