@@ -22,7 +22,7 @@ model User {
   password    String
   role        Role     @default(USER)
   isActive    Boolean  @default(true) @map("is_active")
-  dateOfBirth DateTime @map("date_of_birth")
+  dateOfBirth String
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
