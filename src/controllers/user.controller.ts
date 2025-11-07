@@ -5,6 +5,7 @@ import { RegisterUserBody } from '../validations/register.validation'
 import { hashPassword, validatePassword } from '../utils/password.util'
 import jwt from 'jsonwebtoken'
 import { LoginUserBody } from '../validations/login.validation'
+import { AuthRequest } from '../middlewares/auth.middleware'
 
 export const getHello: RequestHandler = (req, res) => {
   res.status(200).json({ message: 'Hello from user controller' })
@@ -100,10 +101,110 @@ export const loginUser = async (
   }
 }
 
+// Получение информации о себе
+export const getMe = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const currentUser = req.user!
+    const user = await prisma.user.findUnique({
+      where: { id: currentUser.userId },
+    })
+
+    res.status(200).json({ data: user })
+  } catch (error) {
+    next(error)
+  }
+}
+
 // Получение пользователя по ID
-// либо админ, либо пользователь сам себя
-export const getUserById = async () => {}
+// доступно только для администратора
+export const getUserById = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const id = Number(req.params.id)
+
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ message: 'Invalid user ID format' })
+    }
+
+    // if (currentUser.role !== 'ADMIN' && currentUser.userId !== id) {
+    //   return res.status(403).json({
+    //     message: 'Access denied. You can only view your own profile',
+    //   })
+    // }
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+    })
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' })
+    }
+
+    res.status(200).json({ data: user })
+  } catch (error) {
+    next(error)
+  }
+}
 
 // Блокировка пользователя
-// либо админ, либо пользователь сам себя
-export const blockUser = async () => {}
+export const blockMe = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const currentUserId = req.user!.userId
+    const user = await prisma.user.update({
+      where: { id: currentUserId },
+      data: { isActive: false },
+    })
+
+    res
+      .status(200)
+      .json({ message: 'User blocked successfully', data: { user } })
+  } catch (error) {
+    next(error)
+  }
+}
+
+// Блокировка пользователя
+// для администратора
+export const blockUserById = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const id = Number(req.params.id)
+
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ message: 'Invalid user ID format' })
+    }
+
+    const candidate = await prisma.user.findUnique({
+      where: { id },
+    })
+
+    if (!candidate) {
+      return res.status(404).json({ message: 'User not found' })
+    }
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: { isActive: false },
+    })
+
+    res
+      .status(200)
+      .json({ message: 'User blocked successfully', data: { user } })
+  } catch (error) {
+    next(error)
+  }
+}

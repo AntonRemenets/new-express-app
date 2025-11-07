@@ -4,11 +4,11 @@ import jwt from 'jsonwebtoken'
 
 const JWT_SECRET = process.env.JWT_SECRET!
 
-interface AuthUser {
+export interface AuthUser {
   userId: number
   role: 'ADMIN' | 'USER'
 }
-interface AuthRequest extends Request {
+export interface AuthRequest extends Request {
   user?: AuthUser
 }
 
@@ -28,7 +28,7 @@ export function authenticateJWT(
 
     next()
   } catch (err) {
-    console.log(err)
+    //console.log(err)
     return res.status(401).json({ message: 'Unauthorized' })
   }
 }
